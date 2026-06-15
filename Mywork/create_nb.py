@@ -7,6 +7,7 @@ nb.cells.append(nbf.v4.new_markdown_cell("# 🚀 vLLM Inference with LoRA Adapte
 nb.cells.append(nbf.v4.new_markdown_cell('## 📥 Step 1: Environment Setup & Load Model with LoRA Support'))
 
 code1 = '''import os
+import zipfile
 import kagglehub
 from vllm import LLM, SamplingParams
 from vllm.lora.request import LoRARequest
@@ -18,16 +19,23 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["TRITON_PTXAS_PATH"] = "/tmp/triton/backends/nvidia/bin/ptxas"
 
-# Paths - YOU NEED TO UPDATE ZIP PATH
 MODEL_PATH = kagglehub.model_download("metric/nemotron-3-nano-30b-a3b-bf16/transformers/default")
-ADAPTER_ZIP_PATH = "/kaggle/input/notebooks/huikang/tinker-submission-notebook/submission.zip"  # <--- UPDATE THIS
 
-import zipfile
-ADAPTER_PATH = "/tmp/lora_adapter"
-os.makedirs(ADAPTER_PATH, exist_ok=True)
-print(f"Extracting adapter from {ADAPTER_ZIP_PATH}...")
-with zipfile.ZipFile(ADAPTER_ZIP_PATH, "r") as zf:
-    zf.extractall(ADAPTER_PATH)
+# --- ADAPTER CONFIGURATION ---
+# Set to True if loading from a .zip file (e.g., notebook output)
+# Set to False if loading from a direct folder (e.g., Kaggle Dataset)
+LOAD_FROM_ZIP = True
+
+if LOAD_FROM_ZIP:
+    ADAPTER_ZIP_PATH = "/kaggle/input/notebooks/huikang/tinker-submission-notebook/submission.zip" # <--- UPDATE THIS
+    ADAPTER_PATH = "/tmp/lora_adapter"
+    os.makedirs(ADAPTER_PATH, exist_ok=True)
+    print(f"Extracting adapter from {ADAPTER_ZIP_PATH}...")
+    with zipfile.ZipFile(ADAPTER_ZIP_PATH, "r") as zf:
+        zf.extractall(ADAPTER_PATH)
+else:
+    # Path to the directory containing adapter_config.json and adapter_model.safetensors
+    ADAPTER_PATH = "/kaggle/input/your-lora-adapter-dataset" # <--- UPDATE THIS
 
 print(f"Using Base Model: {MODEL_PATH}")
 print(f"Using extracted LoRA Adapter: {ADAPTER_PATH}")
