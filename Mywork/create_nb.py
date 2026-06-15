@@ -109,7 +109,37 @@ print(f"Unsolved in training: {len(df) - df['was_solved_in_training'].sum()}")
 '''
 nb.cells.append(nbf.v4.new_code_cell(code3))
 
-nb.cells.append(nbf.v4.new_markdown_cell('## 🚀 Step 4: Run Batch Inference with LoRA'))
+nb.cells.append(nbf.v4.new_markdown_cell('## 🧪 Step 4: Test Single Inference (Raw Output)'))
+
+code_single = '''# Grab the first prompt from the dataset
+test_prompt = df.iloc[0]["prompt"]
+print("--- TEST PROMPT ---")
+print(test_prompt)
+print("\\n--- GENERATING ---")
+
+messages = build_prompt(test_prompt)
+tokenizer = llm.get_tokenizer()
+input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+
+sampling_params = SamplingParams(
+    temperature=0.0,
+    top_p=1.0,
+    max_tokens=7680
+)
+
+# Run a single generation
+test_output = llm.generate(
+    [input_text], 
+    sampling_params,
+    lora_request=LoRARequest("adapter", 1, ADAPTER_PATH)
+)
+
+print("\\n--- RAW MODEL OUTPUT ---")
+print(test_output[0].outputs[0].text)
+'''
+nb.cells.append(nbf.v4.new_code_cell(code_single))
+
+nb.cells.append(nbf.v4.new_markdown_cell('## 🚀 Step 5: Run Batch Inference with LoRA'))
 
 code4 = '''print(f"Preparing prompts for {len(df)} examples...")
 tokenizer = llm.get_tokenizer()
@@ -136,7 +166,7 @@ print("Batch inference complete!")
 '''
 nb.cells.append(nbf.v4.new_code_cell(code4))
 
-nb.cells.append(nbf.v4.new_markdown_cell('## 📊 Step 5: Parse Outputs & Calculate Correctness'))
+nb.cells.append(nbf.v4.new_markdown_cell('## 📊 Step 6: Parse Outputs & Calculate Correctness'))
 
 code5 = '''import re
 
