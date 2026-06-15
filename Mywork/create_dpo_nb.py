@@ -56,7 +56,27 @@ PatchDPOTrainer()
 '''
 nb.cells.append(nbf.v4.new_code_cell(code2))
 
-nb.cells.append(nbf.v4.new_markdown_cell("## 🧠 Step 3: Load Model & SFT Adapter\nWe load the base model, but point Unsloth directly to your SFT adapter. Unsloth will automatically load the base model and apply the PEFT adapter."))
+nb.cells.append(nbf.v4.new_markdown_cell("## 🔧 Step 3: Hardware Sanity Checks\nEnsure the GPU is correctly detected and that custom CUDA kernels (like `causal_conv1d`) are functioning as expected."))
+code_sanity = '''import causal_conv1d
+import mamba_ssm
+import torch
+
+cc = torch.cuda.get_device_capability(0)
+print(f"GPU: {torch.cuda.get_device_name(0)}, sm_{cc[0] * 10 + cc[1]}")
+print(f"torch={torch.__version__}, cuda={torch.version.cuda}")
+print(f"mamba_ssm={mamba_ssm.__version__}, causal_conv1d={causal_conv1d.__version__}")
+print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
+
+from causal_conv1d import causal_conv1d_fn
+
+_x = torch.randn(1, 512, 32, device="cuda", dtype=torch.bfloat16)+4e-3
+_w = torch.randn(512, 4, device="cuda", dtype=torch.bfloat16)
+causal_conv1d_fn(_x, _w, None, activation="silu")
+print("causal_conv1d CUDA kernel: OK")
+'''
+nb.cells.append(nbf.v4.new_code_cell(code_sanity))
+
+nb.cells.append(nbf.v4.new_markdown_cell("## 🧠 Step 4: Load Model & SFT Adapter\nWe load the base model, but point Unsloth directly to your SFT adapter. Unsloth will automatically load the base model and apply the PEFT adapter."))
 code3 = '''# --- CONFIGURATION ---
 SFT_ADAPTER_PATH = "/kaggle/input/your-sft-adapter-dataset" # Update this to your SFT adapter path
 
@@ -72,7 +92,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 '''
 nb.cells.append(nbf.v4.new_code_cell(code3))
 
-nb.cells.append(nbf.v4.new_markdown_cell("## 📊 Step 4: Load and Format DPO Dataset\nDPO requires `prompt`, `chosen`, and `rejected` keys. We must apply the chat template to the prompt, and add EOS tokens to the chosen/rejected responses."))
+nb.cells.append(nbf.v4.new_markdown_cell("## 📊 Step 5: Load and Format DPO Dataset\nDPO requires `prompt`, `chosen`, and `rejected` keys. We must apply the chat template to the prompt, and add EOS tokens to the chosen/rejected responses."))
 code4 = '''from datasets import load_dataset
 
 # Load your prepared DPO dataset
@@ -122,7 +142,7 @@ print("Formatting complete!")
 '''
 nb.cells.append(nbf.v4.new_code_cell(code4))
 
-nb.cells.append(nbf.v4.new_markdown_cell("## 🏋️‍♂️ Step 5: Configure DPOTrainer and Train\nDPO learning rates should be substantially lower than SFT (e.g., 5e-6)."))
+nb.cells.append(nbf.v4.new_markdown_cell("## 🏋️‍♂️ Step 6: Configure DPOTrainer and Train\nDPO learning rates should be substantially lower than SFT (e.g., 5e-6)."))
 code5 = '''from trl import DPOTrainer
 from transformers import TrainingArguments
 
@@ -157,14 +177,52 @@ dpo_trainer.train()
 '''
 nb.cells.append(nbf.v4.new_code_cell(code5))
 
-nb.cells.append(nbf.v4.new_markdown_cell("## 💾 Step 6: Save the DPO-Optimized LoRA Adapter"))
-code6 = '''# Save the adapter
-OUTPUT_DIR = "dpo_adapter_output"
+nb.cells.append(nbf.v4.new_markdown_cell("## 📈 Step 7: Observability (Loss Plot)\nLet's plot the training loss from the `DPOTrainer` state."))
+code_obs = '''import pandas as pd
+import matplotlib.pyplot as plt
+
+try:
+    log_history = dpo_trainer.state.log_history
+    df = pd.DataFrame(log_history)
+    if 'loss' in df.columns:
+        df_loss = df.dropna(subset=['loss'])
+        plt.figure(figsize=(10,5))
+        plt.plot(df_loss['step'], df_loss['loss'], label="Training Loss")
+        if 'eval_loss' in df.columns:
+            df_eval = df.dropna(subset=['eval_loss'])
+            if not df_eval.empty:
+                plt.plot(df_eval['step'], df_eval['eval_loss'], label="Eval Loss", marker='o')
+        plt.title("DPO Training Loss")
+        plt.xlabel("Steps")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+    else:
+        print("No loss data found in log history.")
+except Exception as e:
+    print(f"Could not plot logs: {e}")
+'''
+nb.cells.append(nbf.v4.new_code_cell(code_obs))
+
+nb.cells.append(nbf.v4.new_markdown_cell("## 💾 Step 8: Save & Package Adapter Weights\nSave the adapter outputs directly and bundle them into `submission.zip` so you can use it in your inference notebook."))
+code7 = '''import os
+import zipfile
+
+OUTPUT_DIR = "."
 model.save_pretrained(OUTPUT_DIR)
 tokenizer.save_pretrained(OUTPUT_DIR)
-print(f"DPO adapter saved to {OUTPUT_DIR}")
+
+adapter_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith("adapter")]
+SUBMISSION_ZIP = "submission.zip"
+with zipfile.ZipFile(SUBMISSION_ZIP, "w", zipfile.ZIP_DEFLATED) as zf:
+    for fname in adapter_files:
+        zf.write(os.path.join(OUTPUT_DIR, fname), fname)
+        os.remove(os.path.join(OUTPUT_DIR, fname)) # Clean up unzipped files to save disk space
+
+print(f"DPO adapter saved and zipped to {SUBMISSION_ZIP}!")
 '''
-nb.cells.append(nbf.v4.new_code_cell(code6))
+nb.cells.append(nbf.v4.new_code_cell(code7))
 
 # Write the notebook
 output_path = 'c:/Users/barad/Desktop/Kaggle/nvidia-nemotron-model-reasoning-challenge/Mywork/create_dpo_nb.py'
