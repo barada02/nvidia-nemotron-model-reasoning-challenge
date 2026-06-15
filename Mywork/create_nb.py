@@ -18,12 +18,19 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["TRITON_PTXAS_PATH"] = "/tmp/triton/backends/nvidia/bin/ptxas"
 
-# Paths - YOU NEED TO UPDATE ADAPTER_PATH
+# Paths - YOU NEED TO UPDATE ZIP PATH
 MODEL_PATH = kagglehub.model_download("metric/nemotron-3-nano-30b-a3b-bf16/transformers/default")
-ADAPTER_PATH = "/kaggle/input/YOUR-LORA-ADAPTER-DATASET/adapter"  # <--- UPDATE THIS
+ADAPTER_ZIP_PATH = "/kaggle/input/notebooks/huikang/tinker-submission-notebook/submission.zip"  # <--- UPDATE THIS
+
+import zipfile
+ADAPTER_PATH = "/tmp/lora_adapter"
+os.makedirs(ADAPTER_PATH, exist_ok=True)
+print(f"Extracting adapter from {ADAPTER_ZIP_PATH}...")
+with zipfile.ZipFile(ADAPTER_ZIP_PATH, "r") as zf:
+    zf.extractall(ADAPTER_PATH)
 
 print(f"Using Base Model: {MODEL_PATH}")
-print(f"Using LoRA Adapter: {ADAPTER_PATH}")
+print(f"Using extracted LoRA Adapter: {ADAPTER_PATH}")
 
 # Initialize vLLM Engine WITH LoRA enabled
 llm = LLM(
