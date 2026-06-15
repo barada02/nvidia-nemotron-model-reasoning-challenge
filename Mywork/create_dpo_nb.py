@@ -177,12 +177,19 @@ dpo_trainer.train()
 '''
 nb.cells.append(nbf.v4.new_code_cell(code5))
 
-nb.cells.append(nbf.v4.new_markdown_cell("## 📈 Step 7: Observability (Loss Plot)\nLet's plot the training loss from the `DPOTrainer` state."))
+nb.cells.append(nbf.v4.new_markdown_cell("## 📈 Step 7: Observability (Loss Plot & Log Export)\nLet's plot the training loss from the `DPOTrainer` state and save the raw logs to a JSON file for later analysis."))
 code_obs = '''import pandas as pd
 import matplotlib.pyplot as plt
+import json
 
 try:
     log_history = dpo_trainer.state.log_history
+    
+    # Save the raw log history to a JSON file for later analysis
+    with open("dpo_training_logs.json", "w") as f:
+        json.dump(log_history, f, indent=4)
+    print("Training logs successfully saved to 'dpo_training_logs.json'")
+    
     df = pd.DataFrame(log_history)
     if 'loss' in df.columns:
         df_loss = df.dropna(subset=['loss'])
