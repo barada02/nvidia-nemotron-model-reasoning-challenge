@@ -80,10 +80,17 @@ nb.cells.append(nbf.v4.new_markdown_cell('## 📁 Step 3: Load the inference_dat
 
 code3 = '''import pandas as pd
 
+# --- CONFIGURATION: Set to an integer (e.g. 10) for testing, or None for full dataset ---
+MAX_SAMPLES = 10
+
 # Load the dataset we prepared locally
 data_path = "inference_dataset.csv"
 print(f"Loading dataset from: {data_path}")
 df = pd.read_csv(data_path, dtype=str)
+
+if MAX_SAMPLES is not None:
+    df = df.head(MAX_SAMPLES).copy()
+    print(f"Sampling {MAX_SAMPLES} rows for testing...")
 
 # Cast the boolean column properly
 df['was_solved_in_training'] = df['was_solved_in_training'] == 'True'
