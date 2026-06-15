@@ -6,8 +6,43 @@ nb = nbf.v4.new_notebook()
 nb.cells.append(nbf.v4.new_markdown_cell("# 🎯 Direct Preference Optimization (DPO) with Unsloth\nThis notebook fine-tunes your existing SFT LoRA adapter using DPO. It loads the `dpo_dataset.jsonl` which contains `{prompt, chosen, rejected}` pairs, and trains the model to prefer the `chosen` logic trace over the `rejected` one."))
 
 nb.cells.append(nbf.v4.new_markdown_cell("## 📦 Step 1: Install Dependencies"))
-code1 = '''!pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
-!pip install --no-deps trl peft accelerate bitsandbytes xformers
+code1 = '''import subprocess
+import os
+
+subprocess.run(
+    "pip install -q --no-index --find-links /kaggle/input/datasets/mayukh18/nemotron-packages/packages "
+    "unsloth trl peft transformers datasets accelerate bitsandbytes",
+    shell=True,
+    check=True,
+)
+subprocess.run(
+    "pip install -q /kaggle/input/datasets/mayukh18/nemotron-packages/causal_conv1d-1.6.1+cu12torch2.10cxx11abiTRUE-cp312-cp312-linux_x86_64.whl",
+    shell=True,
+    check=True,
+)
+subprocess.run(
+    "pip install -q /kaggle/input/datasets/mayukh18/nemotron-packages/mamba_ssm-2.3.1+cu12torch2.10cxx11abiTRUE-cp312-cp312-linux_x86_64.whl",
+    shell=True,
+    check=True,
+)
+for _wd in ["/kaggle/input/datasets/llkh0a/rtx-wheels/wheels"]:
+    if os.path.isdir(_wd):
+        subprocess.run(
+            [
+                "pip",
+                "install",
+                "-q",
+                "--no-index",
+                "--find-links",
+                _wd,
+                "protobuf==6.33.5",
+                "sentencepiece",
+                "safetensors",
+                "huggingface_hub",
+            ],
+            check=False,
+        )
+subprocess.run("rm -rf /kaggle/tmp/*", shell=True, check=False)
 '''
 nb.cells.append(nbf.v4.new_code_cell(code1))
 
