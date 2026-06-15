@@ -26,19 +26,24 @@ def main():
                     pid = data.get("id")
                     status = data.get("status")
                     # If status is rule_found, it means it was solved and is in training data
-                    problem_status[pid] = (status == "rule_found")
+                    category = data.get("category", "unknown")
+                    problem_status[pid] = {
+                        "was_solved": (status == "rule_found"),
+                        "category": category
+                    }
     except FileNotFoundError:
         print(f"Error: Could not find {problems_jsonl_path}")
         return
 
-    # Map the status back to the dataframe
-    df_train['was_solved_in_training'] = df_train['id'].map(lambda x: problem_status.get(x, False))
+    # Map the status and category back to the dataframe
+    df_train['was_solved_in_training'] = df_train['id'].map(lambda x: problem_status.get(x, {}).get("was_solved", False))
+    df_train['category'] = df_train['id'].map(lambda x: problem_status.get(x, {}).get("category", "unknown"))
     
     # Rename answer to original_answer to prevent confusion during inference
     df_train.rename(columns={'answer': 'original_answer'}, inplace=True)
     
     # Select columns we care about
-    df_out = df_train[['id', 'prompt', 'original_answer', 'was_solved_in_training']]
+    df_out = df_train[['id', 'prompt', 'category', 'original_answer', 'was_solved_in_training']]
     
     # Save the dataset
     print(f"Saving inference dataset to {output_csv_path}...")

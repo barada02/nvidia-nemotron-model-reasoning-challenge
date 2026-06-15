@@ -155,6 +155,7 @@ for i, out in enumerate(outputs):
     
     results.append({
         "id": df.iloc[i]["id"],
+        "category": df.iloc[i]["category"],
         "prompt": df.iloc[i]["prompt"],
         "model_thought": thought,
         "model_answer": model_answer,
@@ -174,6 +175,11 @@ print(f"\\n--- RESULTS ---")
 print(f"Overall Accuracy: {total_acc:.2f}%")
 print(f"Accuracy on PREVIOUSLY SOLVED problems: {solved_acc:.2f}%")
 print(f"Accuracy on UNKNOWN/NEW problems: {unsolved_acc:.2f}%")
+
+print(f"\\n--- ACCURACY BY CATEGORY ---")
+cat_acc = df_results.groupby('category')['is_correct_now'].mean() * 100
+for cat, acc in cat_acc.items():
+    print(f"{cat}: {acc:.2f}%")
 
 # Save detailed results
 out_file = "inference_results.csv"
