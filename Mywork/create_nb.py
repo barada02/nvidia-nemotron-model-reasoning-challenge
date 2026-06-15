@@ -141,6 +141,15 @@ nb.cells.append(nbf.v4.new_code_cell(code_single))
 
 nb.cells.append(nbf.v4.new_markdown_cell('## 🚀 Step 5: Run Batch Inference with LoRA'))
 
+code4_prep = '''# Print the very first generated prompt for verification
+tokenizer = llm.get_tokenizer()
+first_messages = build_prompt(df.iloc[0]["prompt"])
+first_input_text = tokenizer.apply_chat_template(first_messages, tokenize=False, add_generation_prompt=True)
+print("--- FIRST BATCH PROMPT (Raw Text) ---")
+print(first_input_text)
+'''
+nb.cells.append(nbf.v4.new_code_cell(code4_prep))
+
 code4 = '''print(f"Preparing prompts for {len(df)} examples...")
 tokenizer = llm.get_tokenizer()
 prompts = []
@@ -173,13 +182,31 @@ code5 = '''import re
 def extract_boxed_content(text):
     if not text:
         return "NOT_FOUND"
-    matches = re.findall(r"\\boxed\{([^}]*)(?:\}|$)", text)
-    if matches:
-        non_empty = [m.strip() for m in matches if m.strip()]
-        if non_empty:
-            return non_empty[-1]
-        return matches[-1].strip()
-    return "NOT_FOUND"
+    
+    # Find 'boxed{' with optional backslashes and spaces
+    match = re.search(r"boxed\s*\{", text)
+    if not match:
+        return "NOT_FOUND"
+    
+    start_idx = match.end()
+    brace_count = 1
+    end_idx = start_idx
+    
+    for i in range(start_idx, len(text)):
+        if text[i] == '{':
+            brace_count += 1
+        elif text[i] == '}':
+            brace_count -= 1
+            
+        if brace_count == 0:
+            end_idx = i
+            break
+            
+    if brace_count == 0:
+        return text[start_idx:end_idx].strip()
+    
+    # If unclosed, just return everything after it
+    return text[start_idx:].strip()
 
 def parse_model_output(output_text):
     thought = ""
